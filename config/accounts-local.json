@@ -1,0 +1,13 @@
+{
+    "owner": "your_discord_username",
+    "emails": [
+        {
+            "email": "abc@gmail.com",
+            "password": "abc@123"
+        },
+        {
+            "email": "xyz@gmail.com",
+            "password": "xyz@123"
+        }
+    ]
+}

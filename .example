@@ -1,0 +1,12 @@
+DISCORD_TOKEN=
+
+# This is the channel ID for the NASTP-BMS channel where the bot will listen for commands.
+CHANNEL_ID=
+NASTP_BMS_CHANNEL_ID=
+
+# TEST_CHANNEL_ID=
+
+DISCORD_GENERATED_URL=
+
+CHROME_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
+

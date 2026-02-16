@@ -1,0 +1,19 @@
+{
+    "name": "office-profile-automation",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "service/backgroundRunner.js",
+    "scripts": {
+        "start": "node service/backgroundRunner.js"
+    },
+    "dependencies": {
+        "discord.js": "^14.14.1",
+        "dotenv": "^16.4.5",
+        "fs-extra": "^11.2.0",
+        "nodemon": "^3.1.11",
+        "ps-node": "^0.1.6",
+        "puppeteer-core": "^24.37.3",
+        "puppeteer-extra": "^3.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2"
+    }
+}
