@@ -4,7 +4,7 @@ import { loginProfiles, logoutProfiles } from "../chrome/profileManager.js";
 
 const configPath = path.resolve("config/accounts.json");
 
-export function parseCommand(msg) {
+export function parseCommandBackup(msg) {
   const config = fs.readJsonSync(configPath);
 
   if (msg.author.username.toLowerCase() !== config.owner.toLowerCase()) return null;
@@ -19,6 +19,27 @@ export function parseCommand(msg) {
   if (content.includes("checked out")) {
     logoutProfiles(config.emails);
     return "CHECKED_OUT";
+  }
+
+  return null;
+}
+
+export async function parseCommand(msg) {
+  const config = fs.readJsonSync(configPath);
+
+  if (msg.author.username.toLowerCase() !== config.owner.toLowerCase())
+    return null;
+
+  const content = msg.content.toLowerCase();
+
+  if (content.includes("checked in")) {
+    const result = await loginProfiles(config.emails);
+    return { type: "IN", result };
+  }
+
+  if (content.includes("checked out")) {
+    const result = await logoutProfiles(config.emails);
+    return { type: "OUT", result };
   }
 
   return null;

@@ -2,17 +2,44 @@ import fs from "fs-extra";
 import path from "path";
 import ps from "ps-node";
 import { execSync } from "child_process";
-import { launchChromeLogin, launchChromeLogout } from "./chromeLauncher.js";
+import { launchChromeLogin } from "./chromeLauncher.js";
+import { sendDiscordMessage } from "../bot/discordNotifier.js";
+
 
 const chromeUserData = "C:\\Users\\johnb\\AppData\\Local\\Google\\Chrome\\User Data";
 
-const emailToProfile = {
-  "flutter.apps.project@gmail.com": "Profile 20",
-  "johnbrrighte7427206@gmail.com": "Profile 15"
-};
 
 async function sleep(ms){
   return new Promise(r => setTimeout(r, ms));
+}
+
+function getProfileFolderByEmail(email) {
+
+  try {
+    const localStatePath = path.join(chromeUserData, "Local State");
+    const state = fs.readJsonSync(localStatePath);
+
+    const profiles = state.profile?.info_cache || {};
+
+    for (const folder in profiles) {
+      const profile = profiles[folder];
+
+      // Chrome stores email in different keys depending on login state
+      const profileEmail =
+        profile.user_name ||
+        profile.account_info?.[0]?.email ||
+        "";
+
+      if (profileEmail.toLowerCase() === email.toLowerCase()) {
+        return folder; // e.g. "Profile 21"
+      }
+    }
+
+  } catch (e) {
+    console.log("Could not read Chrome Local State:", e.message);
+  }
+
+  return null;
 }
 
 async function ensureFolderDeleted(folder){
@@ -39,7 +66,16 @@ export async function loginProfiles(accounts) {
   console.log("Logging in profiles...");
 
   for (const acc of accounts) {
-    const profileDir = path.join(chromeUserData, emailToProfile[acc.email]);
+    
+    const detectedProfile = getProfileFolderByEmail(acc.email);
+
+    if (!detectedProfile) {
+      console.log("No Chrome profile found for:", acc.email);
+      failed.push(acc.email);
+      continue;
+    }
+
+    const profileDir = path.join(chromeUserData, detectedProfile);
 
     if (!fs.existsSync(profileDir)) {
       fs.mkdirSync(profileDir);
@@ -52,32 +88,49 @@ export async function loginProfiles(accounts) {
 export async function logoutProfiles(accounts) {
 
   console.log("Logging out profiles...");
+  console.log("accounts:", accounts);
+
+  const removed = [];
+  const failed = [];
 
   for (const acc of accounts) {
 
-    const profileName = emailToProfile[acc.email];
-    if (!profileName) continue;
+    const detectedProfile = getProfileFolderByEmail(acc.email);
 
-    const profileDir = path.join(chromeUserData, profileName);
+    if (!detectedProfile) {
+      console.log("No Chrome profile found for:", acc.email);
+      failed.push(acc.email);
+      continue;
+    }
 
-    if (!fs.existsSync(profileDir)) continue;
+    const profileDir = path.join(chromeUserData, detectedProfile);
 
-    console.log("Closing Chrome for", profileName);
+    console.log(`Detected profile ${detectedProfile} for ${acc.email}`);
 
-    // 🔴 Kill ONLY Chrome background processes
+    if (!fs.existsSync(profileDir)) {
+      console.log("Profile folder missing:", profileDir);
+      failed.push(acc.email);
+      continue;
+    }
+
+    console.log("Closing Chrome before deletion...");
+
     try {
       execSync('taskkill /IM chrome.exe /T /F', { stdio:"ignore" });
     } catch {}
 
-    // wait for Windows to release file locks
     await sleep(2500);
 
-    // 🔴 delete only that profile folder
     const deleted = await ensureFolderDeleted(profileDir);
 
-    if (deleted)
+    if (deleted) {
+      removed.push(`${acc.email} (${detectedProfile})`);
       console.log("Profile removed:", acc.email);
-    else
+    } else {
+      failed.push(acc.email);
       console.log("Could not remove profile:", acc.email);
+    }
   }
+
+  return { removed, failed };
 }
